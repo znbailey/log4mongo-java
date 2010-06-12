@@ -18,11 +18,10 @@
 
 package com.google.code.log4mongo;
 
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.MDC;
 import org.apache.log4j.spi.ErrorCode;
 import org.apache.log4j.spi.LocationInfo;
 import org.apache.log4j.spi.LoggingEvent;
@@ -125,6 +124,7 @@ public class MongoDbAppender
     private String collectionName = DEFAULT_MONGO_DB_COLLECTION_NAME;
     private String userName       = null;
     private String password       = null;
+    private boolean appendMdcVars = false;
     
     private DBCollection collection = null;
     
@@ -220,11 +220,25 @@ public class MongoDbAppender
             
             addLocationInformation(result, loggingEvent.getLocationInformation());
             addThrowableInformation(result, loggingEvent.getThrowableInformation());
+
+            if (appendMdcVars) {
+                addMDCInformation(result, MDC.getContext());
+            }
         }
         
         return(result);
     }
-    
+
+    private void addMDCInformation(DBObject bson, final Map<String, Object> mdc) {
+        if (mdc != null) {
+            for(Map.Entry<String, Object> e : mdc.entrySet()) {
+                if (e.getValue() != null) {
+                    bson.put(e.getKey(), e.getValue());
+                }
+            }
+        }
+    }
+
 
     /**
      * Adds the LocationInfo object to an existing BSON object. 
@@ -539,6 +553,15 @@ public class MongoDbAppender
     {
         this.password = password;
     }
-    
 
+    /**
+     * @return True if MDC variables will be added to logging event output
+     */
+    public boolean getAppendMdcVars() {
+        return appendMdcVars;
+    }
+
+    public void setAppendMdcVars(boolean appendMdcVars) {
+        this.appendMdcVars = appendMdcVars;
+    }
 }

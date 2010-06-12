@@ -18,11 +18,8 @@
 
 package com.google.code.log4mongo;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 import org.apache.log4j.Logger;
+import org.apache.log4j.MDC;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -34,6 +31,8 @@ import com.mongodb.BasicDBObjectBuilder;
 import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 import com.mongodb.Mongo;
+
+import static org.junit.Assert.*;
 
 
 /**
@@ -218,6 +217,37 @@ public class TestMongoDbAppender
         DBObject chainedEntry = (DBObject)throwables.get("1");                 
         assertTrue("Throwable message is not present in logged entry", chainedEntry.containsField("message"));
         assertEquals("I'm the real culprit!", chainedEntry.get("message"));
+    }
+
+    @Test
+    public void testLogWithMDCVariables()
+        throws Exception
+    {
+        try {
+            appender.setAppendMdcVars(true);
+
+            // set MDC var
+            MDC.put("sid", 2600);
+            log.debug("Let's go with MDC");
+            assertEquals(1L, countLogEntriesAtLevel("debug"));
+
+            // verify log entry content
+            DBObject entry = collection.findOne();
+            assertNotNull(entry);
+            assertEquals(2600, entry.get("sid"));
+
+            // clear MDC and verify it's not present in next logevent
+            MDC.clear();
+            collection.drop();
+            log.debug("Let's go without MDC");
+            assertEquals(1L, countLogEntriesAtLevel("debug"));
+            entry = collection.findOne();
+            assertNotNull(entry);
+            assertFalse(entry.containsField("sid"));
+
+        } finally {
+            appender.setAppendMdcVars(false);
+        }
     }
     
     
